@@ -1,5 +1,5 @@
 import unittest
-from compress_decompress import compress_rle, decompress_rle
+from string.compress_decompress import compress_rle, decompress_rle
 
 class TestRLECompression(unittest.TestCase):
 
