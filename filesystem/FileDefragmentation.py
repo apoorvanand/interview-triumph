@@ -12,4 +12,19 @@ class Defragmenter:
     def allocate(self, file_id:str, num_blocks: int) -> list[int]:
         if len(self.free_blocks) < num_blocks:
             return []
-        allocated_blocks = [self.free_blocks.pop(0)]
+        allocated_blocks = [self.free_blocks.pop(0) for _ in range(num_blocks)]
+        for block_id in allocated_blocks:
+            self.disk[block_id] = file_id
+        return allocated_blocks
+    def defragment(self):
+        new_disk = {}
+        used_blocks = sorted(self.disk.keys())
+        # Shift all used blocks to the begining of the disk
+        new_free_count = self.total_blocks
+        for i, block_id in enumerate(used_blocks):
+            new_disk[i]= self.disk[block_id]
+            new_free_count -= 1
+        self.disk = new_disk
+        self.free_blocks = list(range(self.total_blocks - new_free_count - self.total_blocks))
+        print("Disk defragmented. Free blocks are now contiguous")
+        
