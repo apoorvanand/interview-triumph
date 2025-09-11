@@ -32,35 +32,29 @@ Pruning: We can prune the search space to avoid unnecessary computations. For ex
 '''
 def restoreIpAddresses(s: str) -> list[str]:
     result = []
-    
-    def backtrack(index, current_path):
-        # Base case: we have formed 4 parts
-        if len(current_path) == 4:
-            # Check if all characters have been used
-            if index == len(s):
-                result.append(".".join(current_path))
+    def backtrack(start=0, path=[]):
+        # If we have 4 parts and have used all characters, we found a valid IP
+        if len(path) == 4 and start == len(s):
+            result.append('.'.join(path))
             return
-
-        # Recursive step: try adding a new part
-        for i in range(1, 4):
-            # Pruning: check if substring length is valid and within bounds
-            if index + i > len(s):
-                break
-            
-            segment = s[index:index + i]
-
-            # Validate the segment
-            if is_valid(segment):
-                current_path.append(segment)
-                backtrack(index + i, current_path)
-                current_path.pop() # Backtrack
-
-    def is_valid(segment):
-        # Check for leading zeros and range
-        if len(segment) > 1 and segment.startswith('0'):
+        # Recursive step
+        if len(path) < 4:
+            for length in range(1,4):
+                if start + length <= len(s):
+                    part = s[start:start+length]
+                    # Validate the part
+                    if is_valid(part):
+                        backtrack(start + length, path + [part])
+    def is_valid(part: str) -> bool:
+        if len(part) == 0 or (len(part) > 1 and part[0] == '0'):
             return False
-        
-        return 0 <= int(segment) <= 255
-
-    backtrack(0, [])
+        if int(part) > 255:
+            return False
+        return True
+    backtrack()
     return result
+# Example usage
+if __name__ == "__main__":
+    test_strings = ["25525511135", "0000", "1111", "010010", "101023"]
+    for s in test_strings:
+        print(f"Valid IPs for '{s}': {restoreIpAddresses(s)}")
