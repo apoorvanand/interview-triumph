@@ -1,12 +1,12 @@
-'''
-Group Anagrams
+/* Group Anagrams
 Given an array of strings, group anagrams together.
-'''
-package practice
+*/
+package main
 
 import (
 	"sort"
 	"strings"
+	"fmt"
 )
 
 func groupAnagrams(strs []string) [][]string {
@@ -23,7 +23,13 @@ func groupAnagrams(strs []string) [][]string {
 	}
 	return result
 }
-'''
-File: practice/groupAnagrams.go
-'''
+
+func main() {
+	strs := []string{"eat", "tea", "tan", "ate", "nat", "bat"}
+	anagrams := groupAnagrams(strs)
+	for _, group := range anagrams {
+		fmt.Println(group)
+	}
+
+}
 
