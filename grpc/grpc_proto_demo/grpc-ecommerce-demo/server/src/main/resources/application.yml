@@ -1,0 +1,13 @@
+server/src/main/resources/application.yml:
+spring:
+  application:
+    name: grpc-ecommerce-demo
+  grpc:
+    server:
+      port: 50051
+  server:
+    port: 8080
+logging:
+  level:
+    root: INFO
+    com.example: DEBUG

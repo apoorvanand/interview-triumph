@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package grpcgateway;
+
+service MyService {
+    rpc GetData (DataRequest) returns (DataResponse);
+}
+
+message DataRequest {
+    string request_id = 1;
+}
+
+message DataResponse {
+    string response_data = 1;
+}
