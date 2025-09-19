@@ -1,0 +1,59 @@
+/*
+Design a Notification service full running code in java
+1. Multiple Channels- Email, SMS, push etc 
+2. User calls the API with userid| addreses, templateId, data, priority, Optional - ScheduledAt, and an idempotency key
+3. Deliver must be at-least-once; we'll ensure the idempotency key
+4. Simple in memory queue; in production we shall be using Kakfka/SQS/Pub/sub + workers
+5. Retry with exponential backoff & max attempts; DLQ on exhausation
+6. Basic rate limiting per channel 
+7. Templating with {{var}}
+)
+
+C) Brute force - Big O
+- Store in a list; loop through each tick and send syncronously
+- No prioritization, No backoff; just retry N times 
+- Time - O(N) - Poor latency, head of line blocking
+
+D) Optimised approach (core)
+- Ingress/API validates & writes to an Outbox(status = PENDING) and enqueues a Job into Priority queue (Lower number => higher priority; tie-breaker = schedule time then FIFO)
+- Dispatcher/Workers pull the jobs when due(scheduleAt <= now), render the template, pass to a channel adapter behind the channel interface
+- idempotency - accept idempotency-key: if seen, return existing result; workers mark each NotificationId in a processed set before send
+- Retry/backoff on failure, compute nextAttemptAt = now + base * 2 ^ retries + jitter, increment attempts, re-enqueue, on max attempts
+- Observability = store Notification, Delivery attempts, with timestamp and errors
+- Extenstibility - new Channels implement send(message); template engine swappable
+
+E) Edge cases
+- Duplicate requests (same idempotency key ) - dedupe
+
+
+*/
+class NotificationJob {
+    String id;
+    String userid;
+    String templateId;
+    Map<String, String> data;
+    int priority;
+    Instant scheduleAt;
+    String idempotencyKey;
+    Status status;
+    int attemptCount;
+    String error;
+}
+
+/*
+Dry Run Examples
+- API receives a new Notification request
+- validates, persists to Outbox with PENDING
+- Dispatcher finds job (scheduleAt <= now),checks idempotency store
+- Renders the template, invokes channel adapter
+- On failure, updates job with incremented attemptCount and computes nextAttemptAt
+- 
+*/
+
+public class NotificationService {
+    void enqueue(NotificationRequest req) {
+        void processQueue() {
+            for(NotificationJob ;)
+        }
+    }
+}
