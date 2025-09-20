@@ -1,0 +1,3 @@
+/*
+Generate all non attacking placements of n rooks on an n x n chessboard.
+*/
