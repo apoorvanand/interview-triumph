@@ -74,18 +74,112 @@ queries for addPacket will be made in increasing order of timestamp.
 */
 // @author apoorvanand
 import java.util.*;
+
+/**
+ * A helper class to represent a data packet.
+ * This makes the code cleaner and easier to manage.
+ */
+class Packet {
+    int source;
+    int destination;
+    int timestamp;
+    String key;
+
+    Packet(int source, int destination, int timestamp) {
+        this.source = source;
+        this.destination = destination;
+        this.timestamp = timestamp;
+        // A unique string representation for the packet used for duplicate checking.
+        this.key = source + ":" + destination + ":" + timestamp;
+    }
+}
+
 class Router {
     private final int memoryLimit;
+    // Queue for FIFO order of packets (for forwarding and eviction).
     private final Queue<Packet> packetQueue;
-    private final Set<String> packageSet;
+    // Set for O(1) duplicate checking.
+    private final Set<String> packetSet;
+    // Map for efficient getCount queries. Maps destination -> (timestamp -> count).
     private final Map<Integer, TreeMap<Integer, Integer>> destinationMap;
-    private int currentSize;
+
     public Router(int memoryLimit) {
         this.memoryLimit = memoryLimit;
         this.packetQueue = new LinkedList<>();
-        this.packageSet = new HashSet<>();
+        this.packetSet = new HashSet<>();
         this.destinationMap = new HashMap<>();
-        this.currentSize = 0;
     }
-    
+
+    public boolean addPacket(int source, int destination, int timestamp) {
+        String key = source + ":" + destination + ":" + timestamp;
+        // 1. Duplicate Check: O(1) average time.
+        if (packetSet.contains(key)) {
+            return false;
+        }
+
+        // 2. Eviction Logic: If memory is full, remove the oldest packet.
+        if (packetQueue.size() == memoryLimit) {
+            Packet oldestPacket = packetQueue.poll();
+            if (oldestPacket != null) {
+                // Remove from all data structures.
+                packetSet.remove(oldestPacket.key);
+                updateDestinationMap(oldestPacket.destination, oldestPacket.timestamp, -1);
+            }
+        }
+
+        // 3. Add New Packet to all data structures.
+        Packet newPacket = new Packet(source, destination, timestamp);
+        packetQueue.add(newPacket);
+        packetSet.add(newPacket.key);
+        updateDestinationMap(destination, timestamp, 1);
+
+        return true;
+    }
+
+    public int[] forwardPacket() {
+        // 1. Check if Empty: O(1) time.
+        if (packetQueue.isEmpty()) {
+            return new int[0];
+        }
+
+        // 2. Forward Oldest Packet and remove it from storage.
+        Packet packetToForward = packetQueue.poll();
+        packetSet.remove(packetToForward.key);
+        updateDestinationMap(packetToForward.destination, packetToForward.timestamp, -1);
+
+        return new int[]{packetToForward.source, packetToForward.destination, packetToForward.timestamp};
+    }
+
+    public int getCount(int destination, int startTime, int endTime) {
+        if (!destinationMap.containsKey(destination)) {
+            return 0;
+        }
+
+        TreeMap<Integer, Integer> timestamps = destinationMap.get(destination);
+        // Get a view of the map for the inclusive range [startTime, endTime].
+        SortedMap<Integer, Integer> rangeMap = timestamps.subMap(startTime, true, endTime, true);
+
+        // Sum counts in the range.
+        return rangeMap.values().stream().mapToInt(Integer::intValue).sum();
+    }
+
+    /**
+     * Helper method to update the destinationMap.
+     * It increments or decrements the count for a given destination and timestamp.
+     * If a count drops to zero, the timestamp entry is removed to save space.
+     */
+    private void updateDestinationMap(int destination, int timestamp, int delta) {
+        destinationMap.computeIfAbsent(destination, k -> new TreeMap<>());
+        TreeMap<Integer, Integer> timestamps = destinationMap.get(destination);
+        int newCount = timestamps.getOrDefault(timestamp, 0) + delta;
+
+        if (newCount > 0) {
+            timestamps.put(timestamp, newCount);
+        } else {
+            timestamps.remove(timestamp);
+            if (timestamps.isEmpty()) {
+                destinationMap.remove(destination);
+            }
+        }
+    }
 }
