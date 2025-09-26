@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Monaco Editor with Linting & Major Languages</title>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: #1e1e1e;
+      color: #ccc;
+      font-family: Arial, sans-serif;
+    }
+    body {
+      display: flex;
+      flex-direction: row;
+      height: 100vh;
+      overflow: hidden;
+    }
+    #editorContainer {
+      flex: 1 1 auto;
+      height: 100vh;
+      position: relative;
+    }
+    #controls {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      background: #252526cc;
+      padding: 6px 12px;
+      border-radius: 4px;
+      z-index: 20;
+      font-size: 14px;
+      color: #dcdcdc;
+    }
+    #sideWidget {
+      width: 280px;
+      background: #252526;
+      border-left: 1px solid #333;
+      color: #d4d4d4;
+      padding: 16px 12px 0 16px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      box-shadow: 0 0 8px #1118;
+      font-size: 14px;
+      min-width: 140px;
+    }
+    .status {
+      font-weight: bold;
+      margin-bottom: 14px;
+      color: #4ec9b0;
+    }
+    ul#log {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      font-size: 13px;
+      max-height: 70vh;
+      overflow-y: auto;
+    }
+    li {
+      margin-bottom: 8px;
+    }
+  </style>
+  <link rel="stylesheet" href="https://unpkg.com/monaco-editor@0.34.0/min/vs/editor/editor.main.css" />
+</head>
+<body>
+  <div id="editorContainer">
+    <div id="controls">
+      Language:
+      <select id="languageSelector">
+        <option value="javascript">JavaScript</option>
+        <option value="typescript">TypeScript</option>
+        <option value="python">Python</option>
+        <option value="java">Java</option>
+        <option value="go">Go</option>
+      </select>
+    </div>
+  </div>
+  <div id="sideWidget">
+    <div class="status" id="status">Tab is active</div>
+    <div style="font-size:14px; color:#c586c0;">Keystroke Log</div>
+    <ul id="log"></ul>
+  </div>
+
+  <script>
+    const statusEl = document.getElementById('status');
+    const logEl = document.getElementById('log');
+    const languageSelector = document.getElementById('languageSelector');
+    function logEvent(message) {
+      const li = document.createElement('li');
+      li.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
+      logEl.prepend(li);
+      while (logEl.children.length > 40) logEl.removeChild(logEl.lastChild);
+    }
+    function updateVisibilityStatus() {
+      if (document.hidden) {
+        statusEl.textContent = "Tab is inactive";
+        statusEl.style.color = "#f44747";
+        logEvent("Tab switched away");
+      } else {
+        statusEl.textContent = "Tab is active";
+        statusEl.style.color = "#4ec9b0";
+        logEvent("Tab became active");
+      }
+    }
+    document.addEventListener("visibilitychange", updateVisibilityStatus);
+    window.addEventListener("blur", () => {
+      statusEl.textContent = "Window out of focus";
+      statusEl.style.color = "#e5c07b";
+      logEvent("Window lost focus");
+    });
+    window.addEventListener("focus", () => {
+      statusEl.textContent = "Window in focus";
+      statusEl.style.color = "#4ec9b0";
+      logEvent("Window gained focus");
+    });
+    document.addEventListener("keydown", (e) => {
+      let keys = [];
+      if (e.metaKey) keys.push("Command ⌘");
+      if (e.ctrlKey) keys.push("Control");
+      if (e.altKey) keys.push("Option ⌥");
+      if (e.shiftKey) keys.push("Shift");
+      if (!["Meta", "Control", "Alt", "Shift"].includes(e.key)) {
+        keys.push(e.key);
+      }
+      logEvent(`Key pressed: ${keys.join(" + ")}`);
+    });
+    updateVisibilityStatus();
+  </script>
+
+  <script>
+    var require = {
+      paths: { vs: "https://unpkg.com/monaco-editor@0.34.0/min/vs" }
+    };
+  </script>
+  <script src="https://unpkg.com/monaco-editor@0.34.0/min/vs/loader.js"></script>
+  <script>
+    require(["vs/editor/editor.main"], function () {
+      var editor = monaco.editor.create(document.getElementById("editorContainer"), {
+        value: "// Start typing your code...\nconsole.log('Lint me!');",
+        language: languageSelector.value,
+        theme: "vs-dark",
+        fontSize: 15,
+        minimap: { enabled: true },
+        lineNumbers: "on",
+        automaticLayout: true,
+        folding: true,
+        tabSize: 2,
+        quickSuggestions: true,
+        suggestOnTriggerCharacters: true,
+        formatOnPaste: true,
+        formatOnType: true,
+        rulers: [80, 120],
+        wordBasedSuggestions: true,
+        bracketPairColorization: { enabled: true },
+      });
+
+      // Custom lint markers for demonstration on language change
+      languageSelector.addEventListener('change', function () {
+        monaco.editor.setModelLanguage(editor.getModel(), this.value);
+
+        if (this.value === "python") {
+          monaco.editor.setModelMarkers(editor.getModel(), "owner", [
+            {
+              startLineNumber: 1,
+              startColumn: 1,
+              endLineNumber: 1,
+              endColumn: 10,
+              severity: monaco.MarkerSeverity.Warning,
+              message: "Python example warning: Indentation error?"
+            }
+          ]);
+        } 
+        else if(this.value === "java") {
+          monaco.editor.setModelMarkers(editor.getModel(), "owner", [
+            {
+              startLineNumber: 2,
+              startColumn: 3,
+              endLineNumber: 2,
+              endColumn: 15,
+              severity: monaco.MarkerSeverity.Error,
+              message: "Java example error: Missing semicolon."
+            }
+          ]);
+        }
+        else if(this.value === "go") {
+          monaco.editor.setModelMarkers(editor.getModel(), "owner", [
+            {
+              startLineNumber: 3,
+              startColumn: 5,
+              endLineNumber: 3,
+              endColumn: 20,
+              severity: monaco.MarkerSeverity.Info,
+              message: "Go example info: Unused variable."
+            }
+          ]);
+        }
+        else {
+          // Clear markers for languages with builtin linting like js/ts
+          monaco.editor.setModelMarkers(editor.getModel(), "owner", []);
+        }
+      });
+
+      editor.onKeyDown(function (e) {
+        logEvent('Editor key: ' + e.browserEvent.key);
+      });
+    });
+  </script>
+</body>
+</html>
