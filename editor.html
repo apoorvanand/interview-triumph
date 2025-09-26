@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <title>Monaco Editor with Linting & Major Languages</title>
+  <title>Monaco Editor with Linting, Mouse & Keystroke Monitor</title>
   <style>
     html, body {
       height: 100%;
@@ -34,7 +34,7 @@
       color: #dcdcdc;
     }
     #sideWidget {
-      width: 280px;
+      width: 320px;
       background: #252526;
       border-left: 1px solid #333;
       color: #d4d4d4;
@@ -56,12 +56,14 @@
       list-style: none;
       padding: 0;
       margin: 0;
-      font-size: 13px;
+      font-size: 12.5px;
       max-height: 70vh;
       overflow-y: auto;
+      word-wrap: break-word;
     }
     li {
-      margin-bottom: 8px;
+      margin-bottom: 6px;
+      white-space: normal;
     }
   </style>
   <link rel="stylesheet" href="https://unpkg.com/monaco-editor@0.34.0/min/vs/editor/editor.main.css" />
@@ -81,7 +83,7 @@
   </div>
   <div id="sideWidget">
     <div class="status" id="status">Tab is active</div>
-    <div style="font-size:14px; color:#c586c0;">Keystroke Log</div>
+    <div style="font-size:14px; color:#c586c0;">Activity Log</div>
     <ul id="log"></ul>
   </div>
 
@@ -89,11 +91,13 @@
     const statusEl = document.getElementById('status');
     const logEl = document.getElementById('log');
     const languageSelector = document.getElementById('languageSelector');
+    let lastMouseMoveTime = 0;
+
     function logEvent(message) {
       const li = document.createElement('li');
       li.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
       logEl.prepend(li);
-      while (logEl.children.length > 40) logEl.removeChild(logEl.lastChild);
+      while (logEl.children.length > 50) logEl.removeChild(logEl.lastChild);
     }
     function updateVisibilityStatus() {
       if (document.hidden) {
@@ -129,6 +133,15 @@
       logEvent(`Key pressed: ${keys.join(" + ")}`);
     });
     updateVisibilityStatus();
+
+    // Debounced mouse movement logger (to limit quá nhiều logs)
+    function logMouseMove(e, context) {
+      const now = Date.now();
+      if (now - lastMouseMoveTime > 200) { // throttle: every 200ms
+        logEvent(`${context} mouse move at (${e.clientX}, ${e.clientY})`);
+        lastMouseMoveTime = now;
+      }
+    }
   </script>
 
   <script>
@@ -158,7 +171,6 @@
         bracketPairColorization: { enabled: true },
       });
 
-      // Custom lint markers for demonstration on language change
       languageSelector.addEventListener('change', function () {
         monaco.editor.setModelLanguage(editor.getModel(), this.value);
 
@@ -199,7 +211,6 @@
           ]);
         }
         else {
-          // Clear markers for languages with builtin linting like js/ts
           monaco.editor.setModelMarkers(editor.getModel(), "owner", []);
         }
       });
@@ -207,6 +218,12 @@
       editor.onKeyDown(function (e) {
         logEvent('Editor key: ' + e.browserEvent.key);
       });
+
+      // Log mouse movements on entire window (throttled)
+      window.addEventListener('mousemove', e => logMouseMove(e, "Window"));
+
+      // Log mouse movements inside Monaco editor container (throttled)
+      document.getElementById('editorContainer').addEventListener('mousemove', e => logMouseMove(e, "Editor"));
     });
   </script>
 </body>
